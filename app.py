@@ -123,26 +123,6 @@ with tab1:
     st.subheader("Statistik Deskriptif")
     st.dataframe(df_raw.describe())
 
-    st.subheader("⚠️ Analisis Missing Values")
-    st.info("Grafik ini menunjukkan jumlah dan persentase data yang kosong pada setiap kolom. "
-            "Variabel dengan missing value tinggi perlu mendapat perhatian dalam proses pengumpulan data.")
-
-    mv    = df_raw.isnull().sum().sort_values(ascending=False)
-    total = len(df_raw)
-    pct   = (mv / total * 100).round(1)
-    bar_colors = ["#F4A582" if v > 0 else "#92C5DE" for v in mv.values]
-
-    fig, ax = plt.subplots(figsize=(max(10, len(mv) * 0.85), 4.5))
-    bars = ax.bar(mv.index, mv.values, color=bar_colors, edgecolor='white', linewidth=0.8)
-    for bar, p in zip(bars, pct.values):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + total * 0.002,
-                f"{p}%", ha='center', va='bottom', fontsize=9, color='#444')
-    style_ax(ax, "Missing Values per Kolom", "Kolom", "Jumlah Missing")
-    plt.xticks(rotation=30, ha='right')
-    fig.patch.set_facecolor('#FAFAFA')
-    plt.tight_layout()
-    st.pyplot(fig); plt.close()
-
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — EDA
 # ══════════════════════════════════════════════════════════════════════════════
@@ -203,6 +183,22 @@ with tab2:
     axes[-1].legend(title='Status', bbox_to_anchor=(1.02, 1), loc='upper left', fontsize=9)
     fig.patch.set_facecolor('#FAFAFA')
     plt.tight_layout(pad=2)
+    st.pyplot(fig); plt.close()
+
+    # ── Missing Values
+    mv    = df_raw.isnull().sum().sort_values(ascending=False)
+    total = len(df_raw)
+    pct   = (mv / total * 100).round(1)
+    bar_colors = ["#F4A582" if v > 0 else "#92C5DE" for v in mv.values]
+    fig, ax = plt.subplots(figsize=(max(10, len(mv) * 0.85), 4.5))
+    bars = ax.bar(mv.index, mv.values, color=bar_colors, edgecolor='white', linewidth=0.8)
+    for bar, p in zip(bars, pct.values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + total * 0.002,
+                f"{p}%", ha='center', va='bottom', fontsize=9, color='#444')
+    style_ax(ax, "Missing Values per Kolom", "Kolom", "Jumlah Missing")
+    plt.xticks(rotation=30, ha='right')
+    fig.patch.set_facecolor('#FAFAFA')
+    plt.tight_layout()
     st.pyplot(fig); plt.close()
 
     # ── BIVARIATE ──────────────────────────────────────────────────────────────
