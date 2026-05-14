@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.utils.class_weight import compute_sample_weight
@@ -35,7 +36,7 @@ plt.rcParams.update({
     'grid.color':       '#E8E8E8',
     'grid.linewidth':   0.6,
 })
-PALETTE_STATUS  = ["#6BAED6", "#FD8D3C", "#E6550D"]   # biru-oranye-merah lembut
+PALETTE_STATUS  = ["#74C476", "#FDAE6B", "#E34A33"]    # hijau lembut - oranye lembut -merah lembut
 PALETTE_JK      = ["#74C476", "#9ECAE1"]               # hijau & biru muda
 PALETTE_HIST    = "#A8C8E8"
 PALETTE_SCATTER = ["#6BAED6", "#FD8D3C", "#E6550D"]
@@ -138,7 +139,7 @@ with tab2:
     df2 = df.copy()
     
     STATUS_ORDER = ['Normal', 'Stunting', 'Severely Stunting']
-    STATUS_COLOR = {'Normal': '#6BAED6', 'Stunting': '#E74C3C', 'Severely Stunting': '#F4D03F'}
+    STATUS_COLOR = {'Normal': '#74C476', 'Stunting': '#E34A33', 'Severely Stunting': '#FDAE6B'}
     JK_ORDER = ['L', 'P']
     JK_COLOR = {'L': '#6BAED6', 'P': '#E74C3C'}    
     NUM_COLS     = ['Umur', 'Berat', 'Tinggi', 'BB_Lahir', 'TB_Lahir']
@@ -223,7 +224,12 @@ with tab2:
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
     # Heatmap (kiri)
-    sns.heatmap(df_num.corr(), annot=True, cmap='RdYlBu_r', fmt=".2f", ax=axes[0],
+    # Custom colormap: Hijau -> Oranye -> Merah
+    custom_cmap = LinearSegmentedColormap.from_list(
+        "green_orange_red",
+        ["#4CAF50", "#FF9800", "#E53935"]
+    )
+    sns.heatmap(df_num.corr(), annot=True, cmap=custom_cmap, fmt=".2f", ax=axes[0],
                 linewidths=0.5, linecolor='white', annot_kws={"size": 10},
                 vmin=-1, vmax=1, square=True)
     style_ax(axes[0], "Heatmap Korelasi Antar Fitur")
