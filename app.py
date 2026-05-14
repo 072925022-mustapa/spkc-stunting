@@ -77,6 +77,11 @@ def preprocess(df):
     df = df.drop(columns=['Unnamed: 10', 'Unnamed: 11', 'Tanggal_Pengukuran', 'TB_U', 'ZS_TB_U'], errors='ignore')
     df['BB_Lahir'] = df['BB_Lahir'].fillna(df['BB_Lahir'].median())
     df['TB_Lahir'] = df['TB_Lahir'].fillna(df['TB_Lahir'].median())
+    # Hapus nilai 0 dan outlier ekstrem pada BB_Lahir dan TB_Lahir
+    df = df[df['BB_Lahir'] > 0]
+    df = df[df['TB_Lahir'] > 0]
+    df = df[df['BB_Lahir'] <= 6]    # max berat lahir wajar ~6 kg
+    df = df[df['TB_Lahir'] <= 60]   # max tinggi lahir wajar ~60 cm
     return df
 
 @st.cache_resource
@@ -95,7 +100,7 @@ def train_models(df):
     rf.fit(X_train_s, y_train)
     sw = compute_sample_weight('balanced', y_train)
     xgb = XGBClassifier(random_state=42, eval_metric='mlogloss')
-    xgb.fit(X_train_s, y_train, sample_weight=sw)
+    xgb.fit(X_train_s, y_train)
     return rf, xgb, scaler, le, X_test_s, y_test, X.columns.tolist()
 
 df_raw = load_data()
@@ -398,7 +403,7 @@ with tab4:
     st.markdown(f"""
     <div style="background:#f0f7f4;border-left:4px solid #52b788;border-radius:6px;padding:16px 20px;margin-bottom:16px">
     <b>🏆 Model Terbaik: {best_name}</b><br>
-    Accuracy: <b>{acc:.1%}</b> &nbsp;·&nbsp; F1-Score: <b>{f1:.3f}</b> &nbsp;·&nbsp; AUC: <b>{auc:.3f}</b>
+    Accuracy: <b>{acc:.2%}</b> &nbsp;·&nbsp; F1-Score: <b>{f1:.4f}</b> &nbsp;·&nbsp; AUC: <b>{auc:.4f}</b>
     <br><br>
     <b>🔑 3 Faktor Paling Berpengaruh:</b> {', '.join(top3)}
     <br><br>
@@ -437,7 +442,7 @@ with tab4:
 
     if st.button("Prediksi", type="primary"):
         jk_val     = 1 if jk.startswith("L") else 0
-        input_data = pd.DataFrame([[jk_val, umur, berat, tinggi, bb_lahir, tb_lahir]], columns=feature_cols)
+        input_data = pd.DataFrame([[jk_val, bb_lahir, tb_lahir, umur, berat, tinggi]], columns=feature_cols)
         input_s    = scaler.transform(input_data)
         pred       = best_model.predict(input_s)[0]
         prob       = best_model.predict_proba(input_s)[0]
