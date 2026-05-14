@@ -208,6 +208,46 @@ with tab2:
     # ── BIVARIATE ──────────────────────────────────────────────────────────────
     st.subheader("2. Bivariate Analysis")
 
+    # Heatmap + Stacked bar dalam 1 baris 2 kolom
+    df2['Kelompok_Umur'] = pd.cut(df2['Umur'],
+        bins=[0, 6, 12, 24, 36, 48, 60],
+        labels=['0-6', '7-12', '13-24', '25-36', '37-48', '49-60'])
+    pivot     = df2.groupby(['Kelompok_Umur', 'Status'], observed=True).size().unstack(fill_value=0)
+    pivot     = pivot.reindex(columns=[c for c in STATUS_ORDER if c in pivot.columns])
+    pivot_pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
+    df_num    = df2.drop(columns=['Status', 'Status_Encoded', 'Kelompok_Umur'], errors='ignore').copy()
+    df_num['JK'] = df_num['JK'].map({'Laki-laki': 1, 'Perempuan': 0, 'L': 1, 'P': 0}).fillna(df_num['JK'])
+    df_num    = df_num.select_dtypes(include='number')
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Heatmap (kiri)
+    sns.heatmap(df_num.corr(), annot=True, cmap='RdYlBu_r', fmt=".2f", ax=axes[0],
+                linewidths=0.5, linecolor='white', annot_kws={"size": 10},
+                vmin=-1, vmax=1, square=True)
+    style_ax(axes[0], "Heatmap Korelasi Antar Fitur")
+
+    # Stacked bar (kanan)
+    bottom = np.zeros(len(pivot_pct))
+    for status in pivot_pct.columns:
+        bars = axes[1].bar(pivot_pct.index.astype(str), pivot_pct[status],
+                           bottom=bottom, color=STATUS_COLOR[status],
+                           label=status, edgecolor='white', width=0.6)
+        for bar, val in zip(bars, pivot_pct[status]):
+            if val > 5:
+                axes[1].text(bar.get_x() + bar.get_width()/2,
+                             bar.get_y() + bar.get_height()/2,
+                             f"{val:.0f}%", ha='center', va='center',
+                             fontsize=9, color='white', fontweight='bold')
+        bottom += pivot_pct[status].values
+    axes[1].set_ylim(0, 105)
+    axes[1].legend(title='Status', bbox_to_anchor=(1.01, 1), loc='upper left')
+    style_ax(axes[1], 'Proporsi Status Stunting per Kelompok Umur', 'Kelompok Umur (bulan)', 'Persentase (%)')
+
+    fig.patch.set_facecolor('#FAFAFA')
+    plt.tight_layout(pad=2)
+    st.pyplot(fig); plt.close()
+
     # Violin plot: Berat & Tinggi per Status
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     for ax, (col, ylabel) in zip(axes, [('Berat', 'Berat (kg)'), ('Tinggi', 'Tinggi (cm)')]):
@@ -240,32 +280,6 @@ with tab2:
     st.pyplot(fig); plt.close()
 
     # Stacked bar: proporsi Status per kelompok Umur
-    df2['Kelompok_Umur'] = pd.cut(df2['Umur'],
-        bins=[0, 6, 12, 24, 36, 48, 60],
-        labels=['0-6', '7-12', '13-24', '25-36', '37-48', '49-60'])
-    pivot = df2.groupby(['Kelompok_Umur', 'Status'], observed=True).size().unstack(fill_value=0)
-    pivot = pivot.reindex(columns=[c for c in STATUS_ORDER if c in pivot.columns])
-    pivot_pct = pivot.div(pivot.sum(axis=1), axis=0) * 100
-
-    fig, ax = plt.subplots(figsize=(11, 5))
-    bottom = np.zeros(len(pivot_pct))
-    for status in pivot_pct.columns:
-        bars = ax.bar(pivot_pct.index.astype(str), pivot_pct[status],
-                      bottom=bottom, color=STATUS_COLOR[status],
-                      label=status, edgecolor='white', width=0.6)
-        for bar, val in zip(bars, pivot_pct[status]):
-            if val > 5:
-                ax.text(bar.get_x() + bar.get_width()/2,
-                        bar.get_y() + bar.get_height()/2,
-                        f"{val:.0f}%", ha='center', va='center',
-                        fontsize=9, color='white', fontweight='bold')
-        bottom += pivot_pct[status].values
-    ax.set_ylim(0, 105)
-    ax.legend(title='Status', bbox_to_anchor=(1.01, 1), loc='upper left')
-    style_ax(ax, 'Proporsi Status Stunting per Kelompok Umur', 'Kelompok Umur (bulan)', 'Persentase (%)')
-    fig.patch.set_facecolor('#FAFAFA')
-    plt.tight_layout()
-    st.pyplot(fig); plt.close()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — MODEL
@@ -293,7 +307,18 @@ with tab3:
     fig, ax = plt.subplots(figsize=(11, 5))
     sns.barplot(data=df_melt, x='Metrics', y='Score', hue='Model',
                 palette=PALETTE_BAR, ax=ax, edgecolor='white')
-    add_bar_labels(ax)
+    
+    # Menampilkan label dengan 4 digit desimal
+    for p in ax.patches:
+        height = p.get_height()
+        ax.annotate(
+            f'{height:.4f}',
+            (p.get_x() + p.get_width() / 2., height),
+            ha='center',
+            va='bottom',
+            fontsize=9
+        )
+    
     ax.set_ylim(0, 1.18)
     style_ax(ax, "Perbandingan Performa Model: Random Forest vs XGBoost", "Metrik Evaluasi", "Skor")
     ax.legend(title='Model', framealpha=0.7)
@@ -319,13 +344,31 @@ with tab3:
 
     # ── Classification Report
     st.subheader("Classification Report")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.text("Random Forest")
-        st.text(classification_report(y_test, rf_pred, target_names=le.classes_))
-    with c2:
-        st.text("XGBoost (Balanced)")
-        st.text(classification_report(y_test, xgb_pred, target_names=le.classes_))
+
+    from sklearn.metrics import precision_recall_fscore_support
+
+    def plot_classification_report(ax, y_true, y_pred, title):
+        p, r, f, s = precision_recall_fscore_support(y_true, y_pred, labels=range(len(le.classes_)))
+        classes = le.classes_
+        x = np.arange(len(classes))
+        w = 0.25
+        ax.bar(x - w,   p, w, label='Precision', color='#5B9BD5', edgecolor='white')
+        ax.bar(x,       r, w, label='Recall',    color='#70AD47', edgecolor='white')
+        ax.bar(x + w,   f, w, label='F1-Score',  color='#ED7D31', edgecolor='white')
+        for i, (pv, rv, fv) in enumerate(zip(p, r, f)):
+            for xpos, val in [(i - w, pv), (i, rv), (i + w, fv)]:
+                ax.text(xpos, val + 0.01, f"{val:.2f}", ha='center', va='bottom', fontsize=8)
+        ax.set_xticks(x); ax.set_xticklabels(classes, rotation=10)
+        ax.set_ylim(0, 1.15)
+        ax.legend(fontsize=9, framealpha=0.7)
+        style_ax(ax, title, "Kelas", "Skor")
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    plot_classification_report(axes[0], y_test, rf_pred,  "Classification Report — Random Forest")
+    plot_classification_report(axes[1], y_test, xgb_pred, "Classification Report — XGBoost (Balanced)")
+    fig.patch.set_facecolor('#FAFAFA')
+    plt.tight_layout(pad=2)
+    st.pyplot(fig); plt.close()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — REKOMENDASI
