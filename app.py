@@ -455,6 +455,6 @@ with tab4:
         label      = le.inverse_transform([pred])[0]
         confidence = prob[pred]
 
-        color = {"Normal": "green", "Stunting": "orange", "Severely Stunting": "red"}.get(label, "blue")
+        color = {"Normal": "green", "Stunting": "red", "Severely Stunting": "orange"}.get(label, "blue")
         st.markdown(f"### Hasil: :{color}[**{label}**]")
         st.metric("Confidence", f"{confidence:.2%}")
